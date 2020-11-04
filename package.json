@@ -1,5 +1,5 @@
 {
-  "name": "audioxide-data-processor",
+  "name": "@audioxide/data-processor",
   "version": "0.9.0",
   "description": "Data processor for the Audioxide website",
   "main": "generate.js",
