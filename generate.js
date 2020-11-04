@@ -49,7 +49,7 @@ const mdConverter = new showdown.Converter({ extensions: [footnoteRefExtension, 
 const toHTML = (md) => resolveLocalUrls(mdConverter.makeHtml(md.replace(/([^\n])\n([^\n])/g, '$1\n\n$2')));
 
 let userInputBase, userOutputBase, userSearchBase, userSearchOptions;
-const configPath = process.argv[1];
+const configPath = process.argv[2];
 if (typeof configPath === 'string' && configPath.length > 0) {
     try {
         const configFile = nodePath.resolve(__dirname, process.argv[1], { encoding: 'utf8' });
