@@ -1,0 +1,23 @@
+{
+  "name": "audioxide-data-processor",
+  "version": "0.9.0",
+  "description": "Data processor for the Audioxide website",
+  "main": "generate.js",
+  "repository": "https://github.com/audioxide/data-processor",
+  "author": "Andrew Bridge <andrew@andrewhbridge.co.uk> (https://github.com/andrewbridge)",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "dev": "yarn && node --unhandled-rejections=strict generate.js && npx http-server dist -p 8888 --cors -c-1"
+  },
+  "dependencies": {
+    "flexsearch": "^0.6.32",
+    "jsdom": "^16.4.0",
+    "lodash": "^4.17.15",
+    "rss-generator": "^0.0.3",
+    "sharp": "^0.25.3",
+    "showdown": "^1.9.1",
+    "wpapi": "^1.2.1",
+    "yaml": "^1.9.2"
+  }
+}
