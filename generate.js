@@ -445,7 +445,7 @@ const generateRss = (latest, types, tags) => {
 };
 
 const generateResponse = (obj, name) => {
-    return fs.promises.writeFile(`${outputBase}${name}.json`, JSON.stringify(obj));
+    return fs.promises.writeFile(`${outputBase}/${name}.json`, JSON.stringify(obj));
 };
 
 const init = async () => {
