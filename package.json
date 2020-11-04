@@ -1,6 +1,6 @@
 {
   "name": "@audioxide/data-processor",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Data processor for the Audioxide website",
   "main": "generate.js",
   "repository": "git://github.com/audioxide/data-processor.git",
@@ -10,6 +10,9 @@
   "private": false,
   "scripts": {
     "dev": "yarn && node --unhandled-rejections=strict generate.js && npx http-server dist -p 8888 --cors -c-1"
+  },
+  "bin": {
+    "processAudioxideData": "./generate.js"
   },
   "dependencies": {
     "flexsearch": "^0.6.32",
