@@ -346,7 +346,7 @@ const generateSearchData = async (posts, postTags, postTypes) => {
     const searchOptions = await fs.promises.readFile(searchOptionsPath, { encoding: 'utf8' });
     const index = new FlexSearch(JSON.parse(searchOptions));
     const taxonomies = {
-        tags: postTags.map(tag => ({ title: tag, route: `/tags/${tag}` })),
+        tags: postTags.map(tag => ({ title: tag, route: `/tags/${tag.replace(/ /g, '-')}` })),
         types: postTypes.map(type => ({ title: type, route: `/${type}` })),
     };
     posts.forEach(post => {
