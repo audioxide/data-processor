@@ -558,7 +558,7 @@ const init = async () => {
         generateResponse(Object.keys(tagGrouping), 'tags'),
         ...Object.entries(tagGrouping).map(([tag, post]) => generateResponse(post.map(post => ({ metadata: post.metadata })), `tags/${tag}`)),
         generateResponse(typeGrouping.reviews.slice(0, 11).map(({ metadata }) => ({
-            image: metadata.featuredimage['small-square'],
+            image: metadata.featuredimage['xsmall-square'],
             score: metadata.totalscore.given,
             artist: metadata.artist,
             album: metadata.album,
