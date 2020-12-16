@@ -69,6 +69,7 @@ const inputBase = userInputBase || './data';
 const outputBase = userOutputBase || './dist';
 const searchBase = userSearchBase || './functions/search';
 const searchOptionsPath = userSearchOptions || `${searchBase}/searchOptions.json`;
+const overwriteImages = false;
 const postBase = '/posts';
 const indexedPostsBase = '/posts/indexed';
 const pageBase = '/pages';
@@ -110,10 +111,14 @@ const generateImages = async (originalPath) => {
     await Promise.all(
         imagesSizes.map(({ name, w, h }) => {
             const sizePath = `${imagesBase}${outputImagePath}${outputImageFile}-${name}${extension}`;
+            const absSizePath = outputBase + sizePath;
             sizeObj[name] = process.env.API_URL + sizePath;
+            if (!overwriteImages && fs.existsSync(absSizePath)) {
+                return Promise.resolve();
+            }
             return image.clone()
                 .resize(w, h, { withoutEnlargement: true })
-                .toFile(outputBase + sizePath);
+                .toFile(absSizePath);
         }),
     );
     return sizeObj;
