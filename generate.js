@@ -45,7 +45,7 @@ const pullquoteExtension = () => [
     },
 ];
 
-const mdConverter = new showdown.Converter({ extensions: [footnoteRefExtension, pullquoteExtension] });
+const mdConverter = new showdown.Converter({ tables: true, extensions: [footnoteRefExtension, pullquoteExtension] });
 const toHTML = (md) => resolveLocalUrls(mdConverter.makeHtml(md.replace(/([^\n])\n([^\n])/g, '$1\n\n$2')));
 
 let userInputBase, userOutputBase, userSearchBase, userSearchOptions;
