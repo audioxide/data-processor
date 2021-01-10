@@ -65,6 +65,8 @@ if (typeof configPath === 'string' && configPath.length > 0) {
     }
 }
 
+const API_URL = process.env.API_URL || 'http://localhost:8888';
+const SITE_URL = process.env.SITE_URL || 'http://localhost:3000';
 const inputBase = userInputBase || './data';
 const outputBase = userOutputBase || './dist';
 const searchBase = userSearchBase || './functions/search';
@@ -112,7 +114,7 @@ const generateImages = async (originalPath) => {
         imagesSizes.map(({ name, w, h }) => {
             const sizePath = `${imagesBase}${outputImagePath}${outputImageFile}-${name}${extension}`;
             const absSizePath = outputBase + sizePath;
-            sizeObj[name] = process.env.API_URL + sizePath;
+            sizeObj[name] = API_URL + sizePath;
             if (!overwriteImages && fs.existsSync(absSizePath)) {
                 return Promise.resolve();
             }
@@ -139,7 +141,7 @@ const resolveLocalUrls = async (html) => {
                 let joiner = '';
                 do {
                     const [size, width] = sizes[i];
-                    srcset += `${joiner}${process.env.API_URL}${imagesBase}/${path}${file}-${size}-original${extension} ${Math.min(width, max.w)}w`;
+                    srcset += `${joiner}${API_URL}${imagesBase}/${path}${file}-${size}-original${extension} ${Math.min(width, max.w)}w`;
                     joiner = ',\n';
                     i++;
                 } while (i < sizes.length && sizes[i - 1][1] < max.w);
@@ -152,8 +154,8 @@ const resolveLocalUrls = async (html) => {
             }),
         );
     }
-    return html.replace(localImage, `$1${process.env.API_URL}/images/$2"`)
-        .replace(localLink, `$1${process.env.SITE_URL}/$3"`);
+    return html.replace(localImage, `$1${API_URL}/images/$2"`)
+        .replace(localLink, `$1${SITE_URL}/$3"`);
 }
 
 const processContentFile = async (path, metadataYAML, contentSegments) => {
@@ -389,7 +391,7 @@ const generateRss = (latest, types, tags) => {
     const addItems = (posts, feed) => posts.slice(0, POST_LIMIT).forEach(post => feed.item({
         title: post.metadata.title,
         description: post.metadata.summary || post.metadata.blurb,
-        url: `${process.env.SITE_URL}/${post.metadata.type}/${post.metadata.slug}`,
+        url: `${SITE_URL}/${post.metadata.type}/${post.metadata.slug}`,
         categories: post.metadata.tags,
         date: new Date(post.metadata.created).toISOString(),
         custom_elements: [
@@ -400,8 +402,8 @@ const generateRss = (latest, types, tags) => {
     const defaultOptions = {
         title: "Audioxide",
         description: "Independent music webzine. Publishes reviews, articles, interviews, and other oddities.",
-        feed_url: `${process.env.SITE_URL}/feed/`,
-        site_url: process.env.SITE_URL,
+        feed_url: `${SITE_URL}/feed/`,
+        site_url: SITE_URL,
         language: "en-GB",
         pubDate: now,
         ttl: 1440,
