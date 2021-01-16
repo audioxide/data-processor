@@ -386,7 +386,8 @@ const generateRss = (latest, types, tags) => {
         if (!fs.existsSync(dir)) {
             await fs.promises.mkdir(dir, { recursive: true });
         }
-        await fs.promises.writeFile(path, feed.xml());
+        // Strip out lastBuildDate to stop unnecessary cache misses
+        await fs.promises.writeFile(path, feed.xml().replace(/<lastBuildDate>[^<]+?<\/lastBuildDate>/g, ''));
     };
     const addItems = (posts, feed) => posts.slice(0, POST_LIMIT).forEach(post => feed.item({
         title: post.metadata.title,
@@ -398,23 +399,21 @@ const generateRss = (latest, types, tags) => {
             { "dc:creator": post.metadata.author ? post.metadata.author.name : 'Audioxide' },
         ],
     }));
-    const now = new Date().toISOString();
     const defaultOptions = {
         title: "Audioxide",
         description: "Independent music webzine. Publishes reviews, articles, interviews, and other oddities.",
         feed_url: `${SITE_URL}/feed/`,
         site_url: SITE_URL,
         language: "en-GB",
-        pubDate: now,
         ttl: 1440,
+        // pubDate must be added in each case
         custom_namespaces: {
             sy: "http://purl.org/rss/1.0/modules/syndication/",
             dc: "http://purl.org/dc/elements/1.1/",
         },
         custom_elements: [
             { "sy:updatePeriod": "daily" },
-            { "sy:updateFrequency": 1 },
-            { "lastBuildDate": now }
+            { "sy:updateFrequency": 1 }
         ]
     };
     // Default RSS is latest posts
@@ -430,7 +429,7 @@ const generateRss = (latest, types, tags) => {
         const feed = new RSS({
             ...defaultOptions,
             title: `${startCase(type)} // Audioxide`,
-            feed_url: `${defaultOptions.feed_url}/${type}/`,
+            feed_url: `${defaultOptions.feed_url}${type}/`,
             pubDate: new Date(posts[0].metadata.created).toISOString(),
         });
         addItems(posts, feed);
@@ -442,7 +441,7 @@ const generateRss = (latest, types, tags) => {
         const feed = new RSS({
             ...defaultOptions,
             title: `Posts tagged "${tag}" // Audioxide`,
-            feed_url: `${defaultOptions.feed_url}/tags/${tag}/`,
+            feed_url: `${defaultOptions.feed_url}tags/${tag}/`,
             pubDate: new Date(posts[0].metadata.created).toISOString(),
         });
         addItems(posts, feed);
