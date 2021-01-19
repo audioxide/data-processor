@@ -166,21 +166,20 @@ const runContentAdapters = (html, metadata) => {
         const speakers = [];
         fragment.window.document.querySelectorAll('h2 ~ p strong').forEach(elm => {
             const speaker = elm.textContent;
+            const p = elm.parentElement;
             let index = speakers.indexOf(speaker);
             if (index === -1) {
                 index = speakers.length;
                 speakers.push(speaker);
             }
-            const h3 = fragment.window.document.createElement('h3');
-            h3.innerHTML = speaker;
-            h3.classList.add('speaker-name');
-            h3.classList.add(`speaker-${index}`);
-            elm.parentNode.replaceWith(h3);
+            p.innerHTML = speaker;
+            p.classList.add('speaker-name');
+            p.classList.add(`speaker-${index}`);
         });
-        fragment.window.document.querySelectorAll('h3').forEach(elm => {
+        fragment.window.document.querySelectorAll('p.speaker-name').forEach(elm => {
             const speakerClass = Array.from(elm.classList.values()).find(i => i.match(/speaker-\d/));
             let message = elm.nextElementSibling;
-            while (message && message.tagName === 'P') {
+            while (message && message.tagName === 'P' && !message.classList.contains('speaker-name')) {
                 message.classList.add('message');
                 message.classList.add(speakerClass);
                 message = message.nextElementSibling;
