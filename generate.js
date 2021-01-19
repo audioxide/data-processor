@@ -46,7 +46,8 @@ const pullquoteExtension = () => [
 ];
 
 const mdConverter = new showdown.Converter({ tables: true, extensions: [footnoteRefExtension, pullquoteExtension] });
-const toHTML = (md) => resolveLocalUrls(mdConverter.makeHtml(md.replace(/([^\n|])\n([^\n|])/g, '$1\n\n$2')));
+// TODO: Split adapter running into configurable process step
+const toHTML = async (md, metadata) => runContentAdapters(await resolveLocalUrls(mdConverter.makeHtml(md.replace(/([^\n|])\n([^\n|])/g, '$1\n\n$2'))), metadata);
 
 let userInputBase, userOutputBase, userSearchBase, userSearchOptions;
 const configPath = process.argv[2];
@@ -158,6 +159,38 @@ const resolveLocalUrls = async (html) => {
         .replace(localLink, `$1${SITE_URL}/$3"`);
 }
 
+// TODO: Rewrite this to allow for configurable adaptation
+const runContentAdapters = (html, metadata) => {
+    if (metadata.type === 'listening-parties') {
+        const fragment = new JSDOM(html);
+        const speakers = [];
+        fragment.window.document.querySelectorAll('h2 ~ p strong').forEach(elm => {
+            const speaker = elm.textContent;
+            let index = speakers.indexOf(speaker);
+            if (index === -1) {
+                index = speakers.length;
+                speakers.push(speaker);
+            }
+            const h3 = fragment.window.document.createElement('h3');
+            h3.innerHTML = speaker;
+            h3.classList.add('speaker-name');
+            h3.classList.add(`speaker-${index}`);
+            elm.parentNode.replaceWith(h3);
+        });
+        fragment.window.document.querySelectorAll('h3').forEach(elm => {
+            const speakerClass = Array.from(elm.classList.values()).find(i => i.match(/speaker-\d/));
+            let message = elm.nextElementSibling;
+            while (message && message.tagName === 'P') {
+                message.classList.add('message');
+                message.classList.add(speakerClass);
+                message = message.nextElementSibling;
+            }
+        });
+        html = fragment.window.document.body.innerHTML;
+    }
+    return html;
+}
+
 const processContentFile = async (path, metadataYAML, contentSegments) => {
     // We infer some information from the filename
     const parsedPath = nodePath.parse(path);
@@ -209,19 +242,19 @@ const processContentFile = async (path, metadataYAML, contentSegments) => {
                 if (yaml === null) break;
                 // Reviews and content can both contain markdown
                 if ('review' in yaml) {
-                    yaml.review = await toHTML(yaml.review);
+                    yaml.review = await toHTML(yaml.review, metadata);
                 }
                 if ('content' in yaml) {
-                    yaml.content = await toHTML(yaml.content);
+                    yaml.content = await toHTML(yaml.content, metadata);
                 }
                 if ('body' in yaml) {
-                    yaml.body = await toHTML(yaml.body);
+                    yaml.body = await toHTML(yaml.body, metadata);
                 }
                 return yaml;
             case 'string':
-                return await toHTML(contentStr);
+                return await toHTML(contentStr, metadata);
         }
-        return await toHTML(contentStr);
+        return await toHTML(contentStr, metadata);
         // if (parsed) return parsed;
         // return contentStr;
     }));
