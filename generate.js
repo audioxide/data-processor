@@ -9,6 +9,7 @@ const showdown = require('showdown');
 const sharp = require('sharp');
 const FlexSearch = require('flexsearch');
 const { deburr, set, startCase, uniqueId } = require('lodash');
+const ComponentBundler = require('./buildComponents');
 
 const footnoteRefExtension = () => [
     {
@@ -46,10 +47,54 @@ const pullquoteExtension = () => [
 ];
 
 const mdConverter = new showdown.Converter({ tables: true, extensions: [footnoteRefExtension, pullquoteExtension] });
-// TODO: Split adapter running into configurable process step
-const toHTML = async (md, metadata) => runContentAdapters(await resolveLocalUrls(mdConverter.makeHtml(md.replace(/([^\n|])\n([^\n|])/g, '$1\n\n$2'))), metadata);
+const toHTML = async (md, metadata) => {
+    // The markdown converter needs more spacing than our content naturally has
+    // There's an exception for markdown tables, which need to be on sequential lines
+    const spaceHackedMd = md.replace(/([^\n|])\n([^\n|])/g, '$1\n\n$2');
+    const rawHTML = mdConverter.makeHtml(spaceHackedMd);
+    // Resolve internal, relative URLs to absolute URLs
+    const withResolvedUrls = await resolveLocalUrls(rawHTML);
+    const withContentAdapters = await runContentAdapters(withResolvedUrls, metadata);
+    const matches = customComponentTagNames.filter(tag => withContentAdapters.indexOf('<' + tag) > -1);
+    if (matches.length === 0) return withContentAdapters;
+    const fragment = new JSDOM(withContentAdapters);
+    const fragDoc = fragment.window.document;
+    const tempWrapper = fragDoc.createElement('div');
+    matches.forEach(tag => {
+        const config = customComponents[tag];
+        let found = false;
+        fragDoc.querySelectorAll(tag).forEach(elm => {
+            const props = {};
+            for (const attribute of elm.attributes) {
+                const { name, value } = attribute;
+                props[name] = value;
+                if (name.indexOf('-') > -1) {
+                    const camelCase = name.split('-').map((str, ind) => ind > 0 ? str[0].toUpperCase() + str.substr(1) : str).join('');
+                    props[camelCase] = value;
+                }
+            }
+            tempWrapper.innerHTML = config.html(props).replace(/\n\s*?(?=\S)/g,'').trim();
+            const parent = elm.parentElement;
+            if (parent === fragDoc.body) {
+                elm.after(tempWrapper.firstElementChild);
+                elm.remove();
+            } else {
+                parent.after(tempWrapper.firstElementChild);
+                parent.remove();
+            }
+            found = true;
+        });
+        if (found) {
+            const { scripts, styles } = metadata.components;
+            config.isDynamic && scripts.add(tag);
+            config.hasStyles && styles.add(tag);
+            usedCustomComponents.add(tag);
+        }
+    });
+    return fragDoc.body.innerHTML;
+};
 
-let userInputBase, userOutputBase, userSearchBase, userSearchOptions;
+let userInputBase, userComponentsBase, userOutputBase, userSearchBase, userSearchOptions;
 const configPath = process.argv[2];
 if (typeof configPath === 'string' && configPath.length > 0) {
     try {
@@ -57,6 +102,7 @@ if (typeof configPath === 'string' && configPath.length > 0) {
         const configData = fs.readFileSync(configFile);
         ({
             data: userInputBase,
+            components: userComponentsBase,
             output: userOutputBase,
             searchFunction: userSearchBase,
             searchOptions: userSearchOptions,
@@ -70,6 +116,7 @@ const API_URL = process.env.API_URL || 'http://localhost:8888';
 const SITE_URL = process.env.SITE_URL || 'http://localhost:3000';
 const inputBase = userInputBase || './data';
 const outputBase = userOutputBase || './dist';
+const componentsBase = userComponentsBase || './components';
 const searchBase = userSearchBase || './functions/search';
 const searchOptionsPath = userSearchOptions || `${searchBase}/searchOptions.json`;
 const overwriteImages = false;
@@ -88,6 +135,9 @@ let imageConfig = {};
 const imagesSizes = [];
 const imageMax = {};
 const data = {};
+const customComponents = {};
+const customComponentTagNames = [];
+const usedCustomComponents = new Set();
 
 const getPathParts = filePath => {
     const [match, path, file, extension] = filePath.match(/^(.+?)([^/]+?)(\.[a-zA-Z]{1,4})$/);
@@ -231,6 +281,10 @@ const processContentFile = async (path, metadataYAML, contentSegments) => {
         metadata.featuredimage = await generateImages(metadata.featuredimage);
     }
     // For each further segment, attempt to parse it as YAML, Markdown or just return plain text
+    metadata.components = {
+        scripts: new Set(),
+        styles: new Set(),
+    };
     content = await Promise.all(contentSegments.map(async (contentStr) => {
         let yaml;
         try {
@@ -257,6 +311,8 @@ const processContentFile = async (path, metadataYAML, contentSegments) => {
         // if (parsed) return parsed;
         // return contentStr;
     }));
+    metadata.components.scripts = Array.from(metadata.components.scripts);
+    metadata.components.styles = Array.from(metadata.components.styles);
     if (!('author' in metadata) && Array.isArray(content)) {
         // Generate author from content if possible
         const authors = content.reduce((acc, block) => {
@@ -305,6 +361,23 @@ const parseDir = async (path) => {
             await parseFile(filePath);
         }
     }));
+};
+
+const loadComponents = async () => {
+    const componentDirectories = await fs.promises.readdir(componentsBase);
+    await Promise.all(componentDirectories.map(async dir => {
+        const path = nodePath.resolve(componentsBase, dir);
+        const configPath = nodePath.resolve(path + '/config.js');
+        const stat = await fs.promises.stat(path);
+        if (stat.isDirectory() && fs.existsSync(configPath)) {
+            const config = require(configPath);
+            customComponents[config.tagName] = config;
+            config.root = path;
+            config.isDynamic = fs.existsSync(nodePath.resolve(path + '/component.js'));
+            config.hasStyles = fs.existsSync(nodePath.resolve(path + '/styles.css'));
+        }
+    }));
+    customComponentTagNames.push(...Object.keys(customComponents));
 };
 
 const resolveImageSizes = ({ variations, sizes }) => Object.entries(sizes)
@@ -496,6 +569,8 @@ const init = async () => {
     );
     resolveImageSizes(imageConfig);
 
+    await loadComponents();
+
     // Parse data
     await parseDir('');
 
@@ -576,12 +651,33 @@ const init = async () => {
         targetPost.related = matchingTagPosts.slice(0, RELATED_POSTS).map(({ metadata }) => ({ metadata }));
     });
 
-    await Promise.all(['', postBase, indexedPostsBase, pageBase, imagesBase, tagsBase, feedBase].map(dir => {
-        const checkPath = outputBase + dir;
+    await Promise.all(['', postBase, indexedPostsBase, pageBase, imagesBase, tagsBase, feedBase, componentsBase].map(dir => {
+        const checkPath = nodePath.join(outputBase, dir);
         if (!fs.existsSync(checkPath)) {
             return fs.promises.mkdir(checkPath, { recursive: true });
         }
         return Promise.resolve();
+    }));
+
+    await Promise.all(Array.from(usedCustomComponents).map(async tag => {
+        const config = customComponents[tag];
+        const bundler = new ComponentBundler(config.root);
+
+        const outputDir = nodePath.join(outputBase, componentsBase, tag);
+        if (!fs.existsSync(outputDir)) {
+            await fs.promises.mkdir(outputDir);
+        }
+
+        const styleEntryPoints = ['static', 'component'];
+        const styleExtensions = ['scss', 'sass', 'css'];
+        styleEntryPoints.forEach(prefix => styleExtensions.forEach(suffix => {
+            const styleFilePath = nodePath.resolve(config.root + `/${prefix}.${suffix}`);
+            if (fs.existsSync(styleFilePath)) {
+                bundler.addEntryPoint(styleFilePath);
+            }
+        }));
+
+        await bundler.bundle(outputDir);
     }));
 
     await Promise.all([
@@ -608,6 +704,8 @@ const init = async () => {
             postTotal: postsArr.length,
         }, 'types'),
     ]);
+
+    // TODO: Run component pre-render/generation steps
 };
 
 init().catch(e => {
