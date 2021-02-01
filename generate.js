@@ -373,8 +373,8 @@ const loadComponents = async () => {
             const config = require(configPath);
             customComponents[config.tagName] = config;
             config.root = path;
-            config.isDynamic = fs.existsSync(nodePath.resolve(path + '/component.js'));
-            config.hasStyles = fs.existsSync(nodePath.resolve(path + '/styles.css'));
+            config.isDynamic = fs.existsSync(ComponentBundler.getComponentFile(path));
+            config.hasStyles = ComponentBundler.styleEntrypoints.some(filename => fs.existsSync(nodePath.join(path, filename)));
         }
     }));
     customComponentTagNames.push(...Object.keys(customComponents));
@@ -668,14 +668,12 @@ const init = async () => {
             await fs.promises.mkdir(outputDir);
         }
 
-        const styleEntryPoints = ['static', 'component'];
-        const styleExtensions = ['scss', 'sass', 'css'];
-        styleEntryPoints.forEach(prefix => styleExtensions.forEach(suffix => {
-            const styleFilePath = nodePath.resolve(config.root + `/${prefix}.${suffix}`);
+        ComponentBundler.styleEntrypoints.forEach(filename => {
+            const styleFilePath = nodePath.join(config.root, filename);
             if (fs.existsSync(styleFilePath)) {
                 bundler.addEntryPoint(styleFilePath);
             }
-        }));
+        });
 
         await bundler.bundle(outputDir);
     }));

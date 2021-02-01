@@ -5,13 +5,24 @@ const { default: Parcel } = require('@parcel/core');
 module.exports = class ComponentBundler {
     entries = [];
 
+    static styleEntrypoints = ['static', 'component']
+        .reduce(
+            (acc, prefix) => ['scss', 'sass', 'css']
+                .forEach(suffix => acc.push(`${prefix}.${suffix}`)),
+            [],
+        );
+
+    static getComponentFile(directory) {
+        return nodePath.join(directory, '/component.js');
+    }
+
     constructor(componentDirectory) {
         this.inputDir = componentDirectory;
         this.addEntryPoint(this.inputFile);
     }
 
     get inputFile() {
-        return nodePath.join(this.inputDir, '/component.js');
+        return getComponentFile(this.inputDir);
     }
 
     addEntryPoint(entryPoint) {
