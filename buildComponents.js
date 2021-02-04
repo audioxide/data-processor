@@ -7,8 +7,9 @@ module.exports = class ComponentBundler {
 
     static styleEntrypoints = ['static', 'component']
         .reduce(
-            (acc, prefix) => ['scss', 'sass', 'css']
-                .forEach(suffix => acc.push(`${prefix}.${suffix}`)),
+            (acc, prefix) => acc.concat(
+                ['scss', 'sass', 'css'].map(suffix => `${prefix}.${suffix}`),
+            ),
             [],
         );
 
@@ -22,7 +23,7 @@ module.exports = class ComponentBundler {
     }
 
     get inputFile() {
-        return getComponentFile(this.inputDir);
+        return ComponentBundler.getComponentFile(this.inputDir);
     }
 
     addEntryPoint(entryPoint) {
@@ -34,7 +35,7 @@ module.exports = class ComponentBundler {
         let bundler = new Parcel({
             entries,
             distDir: outputDirectory,
-            defaultConfig: require.resolve("@parcel/config-default"),
+            defaultConfig: nodePath.join(__dirname, "parcelConfig.json"),
             defaultEngines: {
               browsers: ["defaults and supports custom-elementsv1"],
               node: "14",
