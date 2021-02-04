@@ -1,6 +1,6 @@
 {
   "name": "@audioxide/data-processor",
-  "version": "0.13.0--alpha.2",
+  "version": "0.13.0--alpha.3",
   "description": "Data processor for the Audioxide website",
   "main": "generate.js",
   "repository": "git://github.com/audioxide/data-processor.git",
@@ -17,6 +17,7 @@
     "processAudioxideData": "./generate.js"
   },
   "dependencies": {
+    "@parcel/transformer-svgo": "^2.0.0-nightly.1739",
     "flexsearch": "^0.6.32",
     "jsdom": "^16.4.0",
     "lodash": "^4.17.15",
