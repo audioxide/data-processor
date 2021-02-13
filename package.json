@@ -1,6 +1,6 @@
 {
   "name": "@audioxide/data-processor",
-  "version": "0.13.0--alpha.4",
+  "version": "0.13.0",
   "description": "Data processor for the Audioxide website",
   "main": "generate.js",
   "repository": "git://github.com/audioxide/data-processor.git",
