@@ -1,10 +1,12 @@
 {
   "name": "@audioxide/data-processor",
-  "version": "0.12.1",
+  "version": "0.13.0",
   "description": "Data processor for the Audioxide website",
   "main": "generate.js",
   "repository": "git://github.com/audioxide/data-processor.git",
-  "publishConfig": { "registry": "https://npm.pkg.github.com/" },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/"
+  },
   "author": "Andrew Bridge <andrew@andrewhbridge.co.uk> (https://github.com/andrewbridge)",
   "license": "MIT",
   "private": false,
@@ -15,9 +17,11 @@
     "processAudioxideData": "./generate.js"
   },
   "dependencies": {
+    "@parcel/transformer-svgo": "^2.0.0-nightly.1739",
     "flexsearch": "^0.6.32",
     "jsdom": "^16.4.0",
     "lodash": "^4.17.15",
+    "parcel": "^2.0.0-beta.1",
     "rss-generator": "^0.0.3",
     "sharp": "^0.25.3",
     "showdown": "^1.9.1",
