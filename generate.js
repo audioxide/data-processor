@@ -406,6 +406,9 @@ const resolveAuthor = (obj) => {
             }
             return false;
         });
+        if (typeof authorObj === 'undefined') {
+            throw Error(`Author reference '${ref}' could not be resolved.`);
+        }
         return authorObj;
     }
     switch(typeof obj.author) {
@@ -440,10 +443,6 @@ const resolveAuthor = (obj) => {
             // Single author, original use case
             // TODO: Should we return an array here too for consistency?
             const author = resolveSingle(obj.author);
-            if (typeof author !== 'object') {
-                delete obj.author;
-                return;
-            }
             obj.author = {
                 name: author.name,
                 authors: [author],
@@ -586,13 +585,17 @@ const init = async () => {
     const tagGrouping = {};
     for (let id = 0; id < postsArr.length; id++) {
         const post = postsArr[id];
-        // Author resolution
-        resolveAuthor(post.metadata);
-        post.content.forEach(item => {
-            if (typeof item === 'object' && item !== null) {
-                resolveAuthor(item);
-            }
-        });
+        try {
+            // Author resolution
+            resolveAuthor(post.metadata);
+            post.content.forEach(item => {
+                if (typeof item === 'object' && item !== null) {
+                    resolveAuthor(item);
+                }
+            });
+        } catch (e) {
+            throw Error(`[Author resolution] ${post.metadata.slug}: ${e}`);
+        }
 
         // Add id to post
         post.metadata.id = postsArr.length - 1 - id;
