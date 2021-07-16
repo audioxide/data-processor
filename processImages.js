@@ -89,7 +89,7 @@ const parseDir = async (path) => {
 };
 
 const remoteFiles = {};
-const processFile = (path) => {
+const processFile = async (path) => {
     const localChecksum = checksumFile(inputBase + path);
     const remoteExists = path in remoteFiles;
     const checksumMatches = localChecksum === remoteFiles[path];
