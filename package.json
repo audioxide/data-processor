@@ -1,6 +1,6 @@
 {
   "name": "@audioxide/data-processor",
-  "version": "0.14.1",
+  "version": "0.15.0",
   "description": "Data processor for the Audioxide website",
   "main": "generate.js",
   "repository": "git://github.com/audioxide/data-processor.git",
@@ -14,16 +14,18 @@
     "dev": "yarn && node --unhandled-rejections=strict generate.js && npx http-server dist -p 8888 --cors -c-1"
   },
   "bin": {
-    "processAudioxideData": "./generate.js"
+    "processAudioxideData": "./generate.js",
+    "processAudioxideImages": "./processImages.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.21.0",
     "@parcel/transformer-svgo": "^2.0.0-nightly.1739",
     "flexsearch": "^0.6.32",
     "jsdom": "^16.4.0",
     "lodash": "^4.17.15",
     "parcel": "^2.0.0-beta.1",
     "rss-generator": "^0.0.3",
-    "sharp": "^0.25.3",
+    "sharp": "^0.28.3",
     "showdown": "^1.9.1",
     "wpapi": "^1.2.1",
     "yaml": "^1.9.2"
