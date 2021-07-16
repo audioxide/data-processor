@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 const { S3Client, ListBucketsCommand, PutObjectCommand, ListObjectsV2Command } = require("@aws-sdk/client-s3");
 const fs = require('fs/promises');
 const { createReadStream } = require('fs');
