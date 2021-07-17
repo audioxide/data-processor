@@ -95,8 +95,7 @@ const processFile = async (path) => {
     const checksumMatches = localChecksum === remoteFiles[path];
     if (remoteExists && checksumMatches) return; // Image does not need processing
     const { dir, name: filename, ext } = nodePath.parse(path);
-    const sharpExt = ext === '.jpg' ? 'mozjpeg' : ext.replace(/[^a-zA-Z]/g, '');
-    if (!(sharpExt in sharp.format)) return;
+    if (!(ext.substr(1) in sharp.format)) return;
     // if (ext !== '.jpg' || filename.substr(0, 1) !== 'a' || dir.indexOf('artwork') === -1) return;
     console.log(inputBase + path);
     // const metadata = await image.metadata();
