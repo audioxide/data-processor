@@ -110,43 +110,45 @@ const processFile = async (path) => {
         const worker = new Worker(nodePath.join(__dirname, 'processImage.js'), {
             workerData: { imagesSizes, path, inputBase }
         });
-        let workerExited, uploadComplete;
-        Promise.all([
-            new Promise((workerResolve) => workerExited = workerResolve),
-            new Promise((uploadResolve) => uploadComplete = uploadResolve),
-        ]).then(resolve);
+        const promises = [];
         worker.on('message', async ({ fileKey, typedArray }) => {
+            let uploadComplete;
+            promises.push(
+                new Promise((uploadResolve) => uploadComplete = uploadResolve),
+            );
             var bufferObject = new Buffer.alloc(typedArray.byteLength)
             for (var i = 0; i < typedArray.length; i++) {
                 bufferObject[i] = typedArray[i];
             }
-            const command = new PutObjectCommand({
-                Key: fileKey,
-                Bucket: PROCESSED_BUCKET,
-                Body: bufferObject
-            });
             console.log('Preparing to upload', fileKey);
-            await client.send(command);
+            await client.send(
+                new PutObjectCommand({
+                    Key: fileKey,
+                    Bucket: PROCESSED_BUCKET,
+                    Body: bufferObject
+                })
+            );
             console.log('Uploaded', fileKey);
             uploadComplete();
         });
-        worker.on('exit', (code) => {
+        worker.on('exit', async (code) => {
             if (code !== 0) {
                 return reject(new Error(`Worker stopped with exit code ${code}`));
             }
-            workerExited();
+            await Promise.all(promises);
+            await client.send(
+                new PutObjectCommand({
+                    Key: path.substr(1),
+                    Bucket: ORIGINALS_BUCKET,
+                    Body: await fs.readFile(inputBase + path),
+                })
+            );
+            console.log(`Marked "${path}" complete`);
         });
     });
     queue.add(job);
     await job;
     queue.delete(job);
-    const command = new PutObjectCommand({
-        Key: path.substr(1),
-        Bucket: ORIGINALS_BUCKET,
-        Body: await fs.readFile(inputBase + path),
-    });
-    await client.send(command);
-    console.log(`Marked "${path}" complete`);
     // await Promise.all(
     //     imagesSizes.map(async ({ name: sizename, w, h, format }) => {
     //         // TODO: Rework this so it goes into a temp directory
