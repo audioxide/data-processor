@@ -88,6 +88,7 @@ const parseDir = async (path) => {
     }));
 };
 
+const queue = new Set();
 const remoteFiles = {};
 const processFile = async (path) => {
     const rootlessPath = path.substr(1);
@@ -99,13 +100,21 @@ const processFile = async (path) => {
     const sharpExt = ext === '.jpg' ? 'jpeg' : ext.substr(1);
     if (!(sharpExt in sharp.format)) return;
     // if (ext !== '.jpg' || filename.substr(0, 1) !== 'a' || dir.indexOf('artwork') === -1) return;
-    console.log(inputBase + path);
+    while (queue.size > 20) {
+        await Promise.race([...queue]);
+    }
+    console.log(`Adding ${path} to the queue; queue size: ${queue.size}`);
     // const metadata = await image.metadata();
     // imageMax[originalPath] = { w: metadata.width, h: metadata.height };
-    await new Promise((resolve, reject) => {
+    const job = new Promise((resolve, reject) => {
         const worker = new Worker(nodePath.join(__dirname, 'processImage.js'), {
             workerData: { imagesSizes, path, inputBase }
         });
+        let workerExited, uploadComplete;
+        Promise.all([
+            new Promise((workerResolve) => workerExited = workerResolve),
+            new Promise((uploadResolve) => uploadComplete = uploadResolve),
+        ]).then(resolve);
         worker.on('message', async ({ fileKey, typedArray }) => {
             var bufferObject = new Buffer.alloc(typedArray.byteLength)
             for (var i = 0; i < typedArray.length; i++) {
@@ -117,16 +126,20 @@ const processFile = async (path) => {
                 Body: bufferObject
             });
             console.log('Preparing to upload', fileKey);
-            const response = await client.send(command);
+            await client.send(command);
             console.log('Uploaded', fileKey);
+            uploadComplete();
         });
         worker.on('exit', (code) => {
             if (code !== 0) {
                 return reject(new Error(`Worker stopped with exit code ${code}`));
             }
-            resolve();
+            workerExited();
         });
     });
+    queue.add(job);
+    await job;
+    queue.delete(job);
     const command = new PutObjectCommand({
         Key: path.substr(1),
         Bucket: ORIGINALS_BUCKET,
