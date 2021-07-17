@@ -91,11 +91,12 @@ const parseDir = async (path) => {
 const remoteFiles = {};
 const processFile = async (path) => {
     const localChecksum = checksumFile(inputBase + path);
-    const remoteExists = path in remoteFiles;
+    const remoteExists = path.substr(1) in remoteFiles;
     const checksumMatches = localChecksum === remoteFiles[path];
     if (remoteExists && checksumMatches) return; // Image does not need processing
     const { dir, name: filename, ext } = nodePath.parse(path);
-    if (!(ext.substr(1) in sharp.format)) return;
+    const sharpExt = ext === '.jpg' ? 'jpeg' : ext.substr(1);
+    if (!(sharpExt in sharp.format)) return;
     // if (ext !== '.jpg' || filename.substr(0, 1) !== 'a' || dir.indexOf('artwork') === -1) return;
     console.log(inputBase + path);
     // const metadata = await image.metadata();
@@ -116,7 +117,7 @@ const processFile = async (path) => {
             });
             console.log('Preparing to upload', fileKey);
             const response = await client.send(command);
-            console.log('Uploaded', fileKey, response);
+            console.log('Uploaded', fileKey);
         });
         worker.on('exit', (code) => {
             if (code !== 0) {
@@ -130,7 +131,8 @@ const processFile = async (path) => {
         Bucket: ORIGINALS_BUCKET,
         Body: await fs.readFile(inputBase + path),
     });
-    return client.send(command);
+    await client.send(command);
+    console.log(`Marked "${path}" complete`);
     // await Promise.all(
     //     imagesSizes.map(async ({ name: sizename, w, h, format }) => {
     //         // TODO: Rework this so it goes into a temp directory
