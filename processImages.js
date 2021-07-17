@@ -144,6 +144,7 @@ const processFile = async (path) => {
                 })
             );
             console.log(`Marked "${path}" complete`);
+            resolve();
         });
     });
     queue.add(job);
