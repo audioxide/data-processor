@@ -74,7 +74,7 @@ function checksumFile(path) {
     });
 }
 
-const inputBase = './data/images/';
+const inputBase = './data/images';
 const parseDir = async (path) => {
     const files = await fs.readdir(inputBase + path);
     await Promise.all(files.map(async file => {
@@ -90,9 +90,10 @@ const parseDir = async (path) => {
 
 const remoteFiles = {};
 const processFile = async (path) => {
-    const localChecksum = checksumFile(inputBase + path);
-    const remoteExists = path.substr(1) in remoteFiles;
-    const checksumMatches = localChecksum === remoteFiles[path];
+    const rootlessPath = path.substr(1);
+    const localChecksum = await checksumFile(inputBase + path);
+    const remoteExists = rootlessPath in remoteFiles;
+    const checksumMatches = localChecksum === remoteFiles[rootlessPath];
     if (remoteExists && checksumMatches) return; // Image does not need processing
     const { dir, name: filename, ext } = nodePath.parse(path);
     const sharpExt = ext === '.jpg' ? 'jpeg' : ext.substr(1);
@@ -189,7 +190,8 @@ const processFile = async (path) => {
     const { Contents = [] } = await client.send(command);
     // const remoteFiles = {};
     for (const item of Contents) {
-        remoteFiles[item.Key] = item.ETag;
+        const tag = item.ETag;
+        remoteFiles[item.Key] = tag.substr(1, tag.length - 2);
     }
     await parseDir('');
 })()
