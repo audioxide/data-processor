@@ -9,11 +9,11 @@ const sharp = require('sharp');
 
 const formatOptions = {
     'avif': {
-        quality: 30,
+        quality: 50,
         speed: 2,
     },
     'webp': {
-        quality: 30,
+        quality: 50,
     },
     '[original]': {
         progressive: true,

@@ -193,7 +193,12 @@ const processFile = async (path) => {
     //         { encoding: 'utf8' },
     //     ),
     // );
-    resolveImageSizes(dummySizeConfig);
+    resolveImageSizes(
+        await fs.readFile(
+            `${inputBase}/sizes.json`,
+            { encoding: 'utf8' },
+        ),
+    );
     // const command = new ListBucketsCommand({});
     // const command = new PutObjectCommand({
     //     Key: 'test-image.svg',

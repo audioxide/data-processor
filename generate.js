@@ -112,14 +112,13 @@ if (typeof configPath === 'string' && configPath.length > 0) {
     }
 }
 
-const API_URL = process.env.API_URL || 'http://localhost:8888';
-const SITE_URL = process.env.SITE_URL || 'http://localhost:3000';
 const inputBase = userInputBase || './data';
 const outputBase = userOutputBase || './dist';
 const componentsBase = userComponentsBase || './components';
 const searchBase = userSearchBase || './functions/search';
 const searchOptionsPath = userSearchOptions || `${searchBase}/searchOptions.json`;
 const overwriteImages = false;
+const noImageGeneration = process.env.NO_IMAGES === 'true';
 const postBase = '/posts';
 const indexedPostsBase = '/posts/indexed';
 const pageBase = '/pages';
@@ -130,6 +129,10 @@ const segmentDetector = /(^|\r?\n?)---\r?\n/;
 const segmentDivisor = /\r?\n---\r?\n/;
 const localImage = /(?<=<img)([^>]+?src=")(?!http)([^"]+?)"/g;
 const localLink = /(?<=<a )([^>]*?href=")(?!http)(?!mailto)(?!#)(\/{0,1})([^"]+?)"/g;
+
+const API_URL = process.env.API_URL || 'http://localhost:8888';
+const SITE_URL = process.env.SITE_URL || 'http://localhost:3000';
+const IMAGES_CDN_URL = process.env.IMAGES_URL || API_URL + imagesBase;
 
 let imageConfig = {};
 const imagesSizes = [];
@@ -163,10 +166,10 @@ const generateImages = async (originalPath) => {
     imageMax[originalPath] = { w: metadata.width, h: metadata.height };
     await Promise.all(
         imagesSizes.map(({ name, w, h }) => {
-            const sizePath = `${imagesBase}${outputImagePath}${outputImageFile}-${name}${extension}`;
-            const absSizePath = outputBase + sizePath;
-            sizeObj[name] = API_URL + sizePath;
-            if (!overwriteImages && fs.existsSync(absSizePath)) {
+            const sizePath = `${outputImagePath}${outputImageFile}-${name}${extension}`;
+            const absSizePath = outputBase + imagesBase + sizePath;
+            sizeObj[name] = IMAGES_CDN_URL + sizePath;
+            if (noImageGeneration || (!overwriteImages && fs.existsSync(absSizePath))) {
                 return Promise.resolve();
             }
             return image.clone()
@@ -178,6 +181,59 @@ const generateImages = async (originalPath) => {
 }
 
 const resolveLocalUrls = async (html) => {
+    const fragment = new JSDOM(html);
+    const fragDoc = fragment.window.document;
+    const images = fragDoc.querySelectorAll('img');
+    const links = fragDoc.querySelectorAll('a');
+    const sizes = Object.entries(imageConfig.sizes);
+    if (images.length > 0) {
+        await Promise.all(
+            Array.from(images).map(async (image) => {
+                const src = image.src;
+                if (src.startsWith('http')) return;
+                const picture = fragDoc.createElement('picture');
+                const { dir, name, ext } = nodePath.parse(src);
+                await generateImages(src);
+                const max = imageMax[src];
+                imageConfig.formats.forEach(format => {
+                    const source = fragDoc.createElement('source');
+                    const isOriginal = format === '[original]';
+                    let srcset = '';
+                    let i = 0;
+                    let joiner = '';
+                    const sourceExt = isOriginal ? ext : `.${format}`;
+                    do {
+                        const [size, width] = sizes[i];
+                        srcset += `${joiner}${IMAGES_CDN_URL}/${dir}/${name}-${size}-original${sourceExt} ${Math.min(width, max.w)}w`;
+                        joiner = ',\n';
+                        i++;
+                    } while (i < sizes.length && sizes[i - 1][1] < max.w);
+                    source.srcset = srcset
+                    if (!isOriginal) {
+                        source.type = `image/${format}`;
+                    }
+                    picture.appendChild(source);
+                });
+                image.src = `${IMAGES_CDN_URL}/${src.replace(name, `${name}-medium-original`)}`;
+                image.sizes = `(max-width: ${max.w}px) 100vw, ${max.w}px`;
+                image.width = max.w;
+                image.height = max.h;
+                image.loading = 'lazy';
+                image.insertAdjacentElement('afterend', picture);
+                picture.appendChild(image);
+            })
+        );
+    }
+    links.forEach(link => {
+        // Don't prefix absolute URLs, email addresses or anchors
+        if (/^(http|mailto|#)/.test(link.href)) return;
+        link.href = `${SITE_URL}/${link.href}`;
+    });
+
+    return fragDoc.body.innerHTML;
+};
+
+const resolveLocalUrlsOld = async (html) => {
     const images = html.match(localImage);
     if (Array.isArray(images)) {
         await Promise.all(
@@ -192,7 +248,7 @@ const resolveLocalUrls = async (html) => {
                 let joiner = '';
                 do {
                     const [size, width] = sizes[i];
-                    srcset += `${joiner}${API_URL}${imagesBase}/${path}${file}-${size}-original${extension} ${Math.min(width, max.w)}w`;
+                    srcset += `${joiner}${IMAGES_CDN_URL}/${path}${file}-${size}-original${extension} ${Math.min(width, max.w)}w`;
                     joiner = ',\n';
                     i++;
                 } while (i < sizes.length && sizes[i - 1][1] < max.w);
@@ -205,7 +261,7 @@ const resolveLocalUrls = async (html) => {
             }),
         );
     }
-    return html.replace(localImage, `$1${API_URL}/images/$2"`)
+    return html.replace(localImage, `$1${IMAGES_CDN_URL}/$2"`)
         .replace(localLink, `$1${SITE_URL}/$3"`);
 }
 
