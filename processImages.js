@@ -194,9 +194,11 @@ const processFile = async (path) => {
     //     ),
     // );
     resolveImageSizes(
-        await fs.readFile(
-            `${inputBase}/sizes.json`,
-            { encoding: 'utf8' },
+        JSON.parse(
+            await fs.readFile(
+                `${inputBase}/sizes.json`,
+                { encoding: 'utf8' },
+            ),
         ),
     );
     // const command = new ListBucketsCommand({});
