@@ -195,6 +195,7 @@ const resolveLocalUrls = async (html) => {
                 const { dir, name, ext } = nodePath.parse(src);
                 await generateImages(src);
                 const max = imageMax[src];
+                let originalSource;
                 imageConfig.formats.forEach(format => {
                     const source = fragDoc.createElement('source');
                     const isOriginal = format === '[original]';
@@ -211,9 +212,13 @@ const resolveLocalUrls = async (html) => {
                     source.srcset = srcset
                     if (!isOriginal) {
                         source.type = `image/${format}`;
+                    } else {
+                        originalSource = source;
                     }
                     picture.appendChild(source);
                 });
+                // Ensure the original source is always the last choice
+                if (originalSource) picture.appendChild();
                 image.src = `${IMAGES_CDN_URL}/${src.replace(name, `${name}-medium-original`)}`;
                 image.sizes = `(max-width: ${max.w}px) 100vw, ${max.w}px`;
                 image.width = max.w;
