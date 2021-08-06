@@ -218,7 +218,7 @@ const resolveLocalUrls = async (html) => {
                     picture.appendChild(source);
                 });
                 // Ensure the original source is always the last choice
-                if (originalSource) picture.appendChild();
+                if (originalSource) picture.appendChild(originalSource);
                 image.src = `${IMAGES_CDN_URL}/${src.replace(name, `${name}-medium-original`)}`;
                 image.sizes = `(max-width: ${max.w}px) 100vw, ${max.w}px`;
                 image.width = max.w;
