@@ -141,6 +141,10 @@ const processFile = async (path) => {
                     Key: path.substr(1),
                     Bucket: ORIGINALS_BUCKET,
                     Body: await fs.readFile(inputBase + path),
+                    Metadata: {
+                        "Cache-Control": "public, max-age=604800, immutable",
+                        "Content-Type": `image/${sharpExt}`
+                    }
                 })
             );
             console.log(`Marked "${path}" complete`);
