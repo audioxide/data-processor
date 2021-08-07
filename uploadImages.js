@@ -45,6 +45,10 @@ const processFile = async (path) => {
 };
 
 (async () => {
-    remoteFiles.push(...(await client.listFiles()).map(file => file.filePath));
-    await parseDir('');
+    try {
+        remoteFiles.push(...(await client.listFiles()).map(file => file.filePath));
+        await parseDir('');
+    } catch (e) {
+        console.error(e);
+    }
 })()
