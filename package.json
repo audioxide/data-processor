@@ -15,12 +15,14 @@
   },
   "bin": {
     "processAudioxideData": "./generate.js",
-    "processAudioxideImages": "./processImages.js"
+    "processAudioxideImages": "./processImages.js",
+    "processAudioxideUploadImages": "./uploadImages.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.21.0",
     "@parcel/transformer-svgo": "^2.0.0-nightly.1739",
     "flexsearch": "^0.6.32",
+    "imagekit": "^3.2.0",
     "jsdom": "^16.4.0",
     "lodash": "^4.17.15",
     "parcel": "^2.0.0-beta.1",
