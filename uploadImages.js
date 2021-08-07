@@ -33,13 +33,15 @@ const parseDir = async (path) => {
 const remoteFiles = [];
 const processFile = async (path) => {
     if (remoteFiles.includes(path)) return; // Image does not need processing
-    const { dir, base } = nodePath.parse(path);
+    const { dir, base, ext } = nodePath.parse(path);
+    if (!['.jpg', '.jpeg', '.png'].includes(ext)) return;
     await client.upload({
         useUniqueFileName: false,
         folder: dir,
         fileName: base,
-        file: await fs.readFile(inputBase + path),
+        file: (await fs.readFile(inputBase + path)).toString('base64'),
     });
+    console.log(`Uploaded ${path}`);
 };
 
 (async () => {
