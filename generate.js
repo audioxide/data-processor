@@ -494,20 +494,22 @@ const generateRss = (latest, types, tags) => {
         await fs.promises.writeFile(path, feed.xml().replace(/<lastBuildDate>[^<]+?<\/lastBuildDate>/g, ''));
     };
     const addItems = (posts, feed) => posts.slice(0, POST_LIMIT).forEach(post => feed.item({
-        title: post.metadata.title,
+        title: `${post.metadata.type}: ${post.metadata.title}`,
         description: post.metadata.summary || post.metadata.blurb,
         url: `${SITE_URL}/${post.metadata.type}/${post.metadata.slug}`,
         categories: post.metadata.tags,
         date: new Date(post.metadata.created).toISOString(),
         custom_elements: [
             { "dc:creator": post.metadata.author ? post.metadata.author.name : 'Audioxide' },
+            { "content": toHTML(post.metadata.content)},
         ],
     }));
     const defaultOptions = {
         title: "Audioxide",
-        description: "Independent music webzine. Publishes reviews, articles, interviews, and other oddities.",
+        description: "Three friends reviewing an album a week. Also publish articles, interviews, and other oddities when then mood takes them.",
         feed_url: `${SITE_URL}/feed/`,
         site_url: SITE_URL,
+        image_url: "https://audioxide.com/full-logo-black-on-white.png",
         language: "en-GB",
         ttl: 1440,
         // pubDate must be added in each case
